@@ -1,119 +1,113 @@
 package com.kiro.s3.compatible.filesystem;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.auth.profile.ProfilesConfigFile;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.kiro.s3.compatible.filesystem.operations.*;
 
 public class FileSystem {
-
-    final AmazonS3 mAmazonS3Client;
+    private final AmazonS3 mAmazonS3Client;
+    private final FileSystemOperationExecutor mFileSystemOperationExecutor;
 
     public FileSystem(String profileName, String endpoint) {
         mAmazonS3Client = AmazonS3ClientBuilder.standard().withCredentials(
                 new ProfileCredentialsProvider(new ProfilesConfigFile(), profileName)).
-                withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint,""))
+                withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, ""))
                 .build();
+
+        mFileSystemOperationExecutor = new FileSystemOperationExecutor();
 
     }
 
-    public FileSystem(String profileName, Regions region){
+    public FileSystem(String profileName, Regions region) {
         mAmazonS3Client = AmazonS3ClientBuilder.standard().withCredentials(
                 new ProfileCredentialsProvider(new ProfilesConfigFile(), profileName)).withRegion(region)
                 .build();
 
+        mFileSystemOperationExecutor = new FileSystemOperationExecutor();
     }
 
-    public void list(File fileToList) {
+    public ObjectListing list(String bucketName, String fileToList, int maxEntries) throws Exception {
+        assert !(bucketName == null || bucketName.isEmpty()) : "Bucket name cannot be null";
+        assert !(fileToList == null || fileToList.isEmpty()) : "Folder name cannot be null";
 
+        ListOperation listOperation = new ListOperation(mAmazonS3Client, bucketName, fileToList, maxEntries);
+        mFileSystemOperationExecutor.executeFileSystemOperation(listOperation);
+
+        return listOperation.getResult();
     }
 
 
-    public void createDirectory() {
+    public Boolean createDirectory(String bucketName, String folderName) throws Exception {
+        assert !(bucketName == null || bucketName.isEmpty()) : "Bucket name cannot be null";
+        assert !(folderName == null || folderName.isEmpty()) : "Folder name cannot be null";
 
+        CreateDirectoryOperation createDirectoryOperation =
+                new CreateDirectoryOperation(mAmazonS3Client, bucketName, folderName);
+        mFileSystemOperationExecutor.executeFileSystemOperation(createDirectoryOperation);
+
+        return createDirectoryOperation.getResult();
     }
 
-    public void delete(File fileToDelete) {
+    public Boolean delete(String bucketName, String fileToDelete) throws Exception {
+        assert !(bucketName == null || bucketName.isEmpty()) : "Bucket name cannot be null";
+        assert !(fileToDelete == null || fileToDelete.isEmpty()) : "File to delete cannot be null";
 
+        DeleteFileOperation deleteFileOperation = new DeleteFileOperation(mAmazonS3Client, bucketName, fileToDelete);
+        mFileSystemOperationExecutor.executeFileSystemOperation(deleteFileOperation);
+
+        return deleteFileOperation.getResult();
     }
 
-    public void deleteFile() {
-
+    public boolean isFile(String fileName) {
+        return !fileName.endsWith("/");
     }
 
-    public void isFile() {
+    public Boolean uploadFile(String bucketName, String remoteFilePath, String localFilePath) throws Exception {
+        assert !(bucketName == null || bucketName.isEmpty()) : "Bucket name cannot be null";
+        assert !(remoteFilePath == null || remoteFilePath.isEmpty()) : "Folder name cannot be null";
+        assert !(localFilePath == null || localFilePath.isEmpty()) : "Folder name cannot be null";
 
+        UploadFileOperation uploadFileOperation =
+                new UploadFileOperation(mAmazonS3Client, bucketName, remoteFilePath, localFilePath);
+        mFileSystemOperationExecutor.executeFileSystemOperation(uploadFileOperation);
+
+        return uploadFileOperation.getResult();
     }
 
-    public void uploadFile(String buckerName, String fileName) {
+    public boolean rename(String bucketName, String oldFileName, String newFileName) throws Exception {
+        assert !(bucketName == null || bucketName.isEmpty()) : "Bucket name cannot be null";
+        assert !(oldFileName == null || oldFileName.isEmpty()) : "File which you want to rename cannot be null";
+        assert !(newFileName == null || newFileName.isEmpty()) :
+                "Name, which you want file to be renamed to cannot be null";
 
-        // Create a list of UploadPartResponse objects. You get one of these for
-        // each part upload.
-        List<PartETag> partETags = new ArrayList<PartETag>();
+        CopyFileOperation copyFileOperation =
+                new CopyFileOperation(mAmazonS3Client, bucketName, oldFileName, bucketName, newFileName);
+        mFileSystemOperationExecutor.executeFileSystemOperation(copyFileOperation);
 
-        // Step 1: Initialize.
-        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(
-                buckerName, fileName);
-        InitiateMultipartUploadResult initResponse =
-                mAmazonS3Client.initiateMultipartUpload(initRequest);
+        if (copyFileOperation.getResult()) {
+            DeleteFileOperation deleteFileOperation =
+                    new DeleteFileOperation(mAmazonS3Client, bucketName, oldFileName);
 
-        File file = new File(filePath);
-        long contentLength = file.length();
-        long partSize = 5 * 1024 * 1024; // Set part size to 5 MB.
+            mFileSystemOperationExecutor.executeFileSystemOperation(deleteFileOperation);
 
-        try {
-            // Step 2: Upload parts.
-            long filePosition = 0;
-            for (int i = 1; filePosition < contentLength; i++) {
-                // Last part can be less than 5 MB. Adjust part size.
-                partSize = Math.min(partSize, (contentLength - filePosition));
-
-                // Create request to upload a part.
-                UploadPartRequest uploadRequest = new UploadPartRequest()
-                        .withBucketName(existingBucketName).withKey(keyName)
-                        .withUploadId(initResponse.getUploadId()).withPartNumber(i)
-                        .withFileOffset(filePosition)
-                        .withFile(file)
-                        .withPartSize(partSize);
-
-                // Upload part and add response to our list.
-                partETags.add(mAmazonS3Client.uploadPart(uploadRequest).getPartETag());
-
-                filePosition += partSize;
-            }
-
-            // Step 3: Complete.
-            CompleteMultipartUploadRequest compRequest = new
-                    CompleteMultipartUploadRequest(existingBucketName,
-                    keyName,
-                    initResponse.getUploadId(),
-                    partETags);
-
-            mAmazonS3Client.completeMultipartUpload(compRequest);
-        } catch (Exception e) {
-            mAmazonS3Client.abortMultipartUpload(new AbortMultipartUploadRequest(
-                    existingBucketName, keyName, initResponse.getUploadId()));
+            return deleteFileOperation.getResult();
         }
+
+        return false;
     }
 
-    public void rename() {
+    public boolean exist(String bucketName, String fileName) throws Exception {
+        FileExistOperation fileExistOperation = new FileExistOperation(mAmazonS3Client, bucketName, fileName);
 
+        mFileSystemOperationExecutor.executeFileSystemOperation(fileExistOperation);
+
+        return fileExistOperation.getResult();
     }
 
-    public void getLastModificationDate() {
 
-    }
 }
