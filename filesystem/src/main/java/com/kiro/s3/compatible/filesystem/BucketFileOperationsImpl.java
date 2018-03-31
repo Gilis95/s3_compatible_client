@@ -1,13 +1,16 @@
 package com.kiro.s3.compatible.filesystem;
 
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.kiro.s3.compatible.filesystem.api.BucketFileOperations;
+import com.kiro.s3.compatible.filesystem.api.ProfileFileOperations;
+import com.kiro.s3.compatible.filesystem.api.exceptions.FileSystemOperationException;
 
-public class FileSystemService {
-    private final FileSystem mFileSystem;
+public final class BucketFileOperationsImpl implements BucketFileOperations {
+    private final ProfileFileOperations mFileSystem;
     private final String mBucketName;
 
-    public FileSystemService(final FileSystem fileSystem, final String bucketName) {
-        mFileSystem = fileSystem;
+    public BucketFileOperationsImpl(final ProfileFileOperations s3FileSystem, final String bucketName) {
+        mFileSystem = s3FileSystem;
         mBucketName = bucketName;
     }
 

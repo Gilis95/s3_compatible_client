@@ -14,4 +14,11 @@ abstract class FileSystemOperationBase implements FileSystemOperation {
         mAmazonS3Client = s3Client;
         mBucketName = bucketName;
     }
+
+    FileSystemOperationBase(final AmazonS3 s3Client) {
+        assert !(s3Client == null) : "Amazon S3 cl;ient cannot be null";
+
+        mBucketName = null;
+        mAmazonS3Client = s3Client;
+    }
 }

@@ -24,5 +24,10 @@
                 <artifactId>aws-java-sdk-core</artifactId>
                 <version>1.11.301</version>
             </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>filesystem-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
 </project>

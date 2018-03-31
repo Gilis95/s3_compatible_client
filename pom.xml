@@ -5,6 +5,10 @@
     <groupId>com.kiro.s3.compatible</groupId>
     <artifactId>client</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <modules>
+        <module>core</module>
+        <module>filesystem-api</module>
+    </modules>
     <packaging>pom</packaging>
 
     <name>server</name>

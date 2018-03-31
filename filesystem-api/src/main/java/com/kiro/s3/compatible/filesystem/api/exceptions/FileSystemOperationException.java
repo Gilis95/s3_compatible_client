@@ -1,4 +1,4 @@
-package com.kiro.s3.compatible.filesystem;
+package com.kiro.s3.compatible.filesystem.api.exceptions;
 
 public class FileSystemOperationException extends Exception {
 

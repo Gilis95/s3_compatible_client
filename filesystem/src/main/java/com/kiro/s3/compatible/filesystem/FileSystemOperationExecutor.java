@@ -2,6 +2,7 @@ package com.kiro.s3.compatible.filesystem;
 
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.kiro.s3.compatible.filesystem.api.exceptions.FileSystemOperationException;
 
 /**
  * This class is used for executing {@link FileSystemOperation} implementations
