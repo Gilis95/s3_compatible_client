@@ -10,14 +10,19 @@
 
 namespace Aws {
     namespace Browser {
-        class S3Client {
-        private:
-            const Aws::S3::S3Client client;
-        public:
-            S3Client(const AwsConnectivityConfiguration &);
+        namespace S3Client {
+            class S3OperationHelper {
+            private:
+                Aws::S3::S3Client client;
+            public:
+                S3OperationHelper(const AwsConnectivityConfiguration &connectivityConfiguration) : client(
+                        connectivityConfiguration.credentials,
+                        connectivityConfiguration.clientConfiguration) { };
 
-            Aws::Utils::Outcome<S3::Model::CreateBucketResult, Aws::Client::AWSError<Aws::S3::S3Errors>> &
-            mkBucket(const Aws::String &) const;
-        };
+                Aws::S3::Model::CreateBucketOutcome mkBucket(const Aws::String &bucketName) const;
+
+                Aws::S3::Model::GetObjectOutcome ls(const Aws::String &directory) const;
+            };
+        }
     }
 }

@@ -1,4 +1,3 @@
-
 /*
    Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
    This file is licensed under the Apache License, Version 2.0 (the "License").
@@ -20,6 +19,7 @@
 #include <s3-client.h>
 #include <aws/core/utils/logging/ConsoleLogSystem.h>
 #include <aws/core/utils/logging/DefaultLogSystem.h>
+#include <console-user-interface.h>
 //snippet-end:[s3.cpp.create_bucket.inc]
 
 /**
@@ -50,11 +50,9 @@ int main() {
                                                                       "/home/christian/aws-browser");
     };
     Aws::InitAPI(options);
-    Aws::Browser::S3Client s3Client(configurationOutcome.GetResult());
+    Aws::Browser::ConsoleInterface::ConsoleUserInterface(
+            Aws::Browser::S3Client::S3OperationHelper(configurationOutcome.GetResult())).startInterface();
 
-    {
-        s3Client.mkBucket("gosho");
-    }
 
     Aws::ShutdownAPI(options);
 }
