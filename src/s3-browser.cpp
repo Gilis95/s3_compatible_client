@@ -49,7 +49,9 @@ int main() {
                                                                       Aws::Utils::Logging::LogLevel::Info,
                                                                       "/home/christian/aws-browser");
     };
+
     Aws::InitAPI(options);
+
     Aws::Browser::ConsoleInterface::ConsoleUserInterface(
             Aws::Browser::S3Client::S3OperationHelper(configurationOutcome.GetResult())).startInterface();
 

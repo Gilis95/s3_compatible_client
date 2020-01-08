@@ -6,30 +6,33 @@
 #include <aws/core/NoResult.h>
 #include <aws/core/utils/Outcome.h>
 #include "console-user-interface.h"
-#include "s3-client.h"
-
 
 namespace Aws {
     namespace Browser {
         namespace ConsoleInterface {
 
-            void mkBucket(std::istringstream &input, const Aws::Browser::S3Client::S3OperationHelper &operationHelper);
+            void mkBucket(const std::string& commandName, std::istringstream &input,
+                          const Aws::Browser::S3Client::S3OperationHelper &operationHelper);
 
+
+            template<typename Result>
+            void handleError(const std::string& commandName,
+                             Aws::Utils::Outcome<Result, Aws::Client::AWSError<Aws::S3::S3Errors>> result);
 
             void ConsoleUserInterface::startInterface() {
                 std::string userInput;
-                std::getline(std::cin, userInput);
-                while (!std::getline(std::cin, userInput) && userInput != "exit") {
+
+                while (std::getline(std::cin, userInput) && userInput != "exit") {
                     std::istringstream userInputStream(userInput);
                     std::string command;
                     userInputStream >> command;
                     auto operation = operations.find(command);
                     if (operation != operations.end()) {
-                        operation->second(userInputStream, getOperationsHelper());
+                        operation->second(command,userInputStream, getOperationsHelper());
                         continue;
                     }
 
-                    std::cout << "No such command" << userInput << std::endl;
+                    std::cout << "No such command \"" << userInput << "\"."<<std::endl;
                 }
             }
 
@@ -38,12 +41,25 @@ namespace Aws {
                 operations["mkbucket"] = Aws::Browser::ConsoleInterface::mkBucket;
             }
 
-            void mkBucket(std::istringstream &input, const Aws::Browser::S3Client::S3OperationHelper &operationHelper) {
+            void mkBucket(const std::string& commandName, std::istringstream &input,
+                          const Aws::Browser::S3Client::S3OperationHelper &operationHelper) {
                 Aws::String bucket;
 
                 input >> bucket;
 
-                operationHelper.mkBucket(bucket);
+                handleError(commandName, operationHelper.mkBucket(bucket));
+            }
+
+            template<typename Result>
+            void handleError(const std::string& commandName,
+                             Aws::Utils::Outcome<Result, Aws::Client::AWSError<Aws::S3::S3Errors>> result) {
+                if (result.IsSuccess()) {
+                    std::cout << "Command \"" << commandName << "\" has been executed successfully." << std::endl;
+                } else {
+                    std::cout << "Command \"" << commandName << "\" has failed with following error \"" <<
+                    result.GetError().GetMessage() << "\"."<< std::endl;
+                }
+
             }
         }
     }
